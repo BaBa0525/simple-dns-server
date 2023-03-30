@@ -18,16 +18,16 @@ auto ServerBuilder::bind(uint16_t port) -> Server {
 
     int on = 1;
     setsockopt(this->server.sock_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    if (::bind(this->server.sock_fd, (sockaddr *)&sin, sizeof(sin)) < 0)
+    if (::bind(this->server.sock_fd, (sockaddr*)&sin, sizeof(sin)) < 0)
         err_quit("Fail to bind port");
 
     return this->server;
 }
 
-auto ServerBuilder::load_config(const fs::path &config_path)
-    -> ServerBuilder & {
+auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
     std::ifstream ifs(config_path);
-    if (!ifs.is_open()) err_quit("Fail to open config file");
+    if (!ifs.is_open())
+        err_quit("Fail to open config file");
     spdlog::info("Reading config file {}", config_path.string());
 
     if (!std::getline(ifs, this->server.forward_ip)) {
@@ -37,7 +37,8 @@ auto ServerBuilder::load_config(const fs::path &config_path)
     std::string line;
     while (std::getline(ifs, line)) {
         auto split_line = split(line, ',');
-        if (split_line.size() < 2) err_quit("config file format incorrect");
+        if (split_line.size() < 2)
+            err_quit("config file format incorrect");
 
         std::string domain = std::move(split_line[0]);
         std::string filename = std::move(split_line[1]);
@@ -49,12 +50,14 @@ auto ServerBuilder::load_config(const fs::path &config_path)
     return *this;
 }
 
-void ServerBuilder::load_zone(const fs::path &zone_path) {
+void ServerBuilder::load_zone(const fs::path& zone_path) {
     std::ifstream ifs(zone_path);
-    if (!ifs.is_open()) err_quit("Fail to open zone file");
+    if (!ifs.is_open())
+        err_quit("Fail to open zone file");
 
     std::string domain, line;
-    if (!std::getline(ifs, domain)) err_quit("Fail to get domain");
+    if (!std::getline(ifs, domain))
+        err_quit("Fail to get domain");
     domain = trim(domain);
 
     while (std::getline(ifs, line)) {
@@ -78,11 +81,11 @@ void ServerBuilder::load_zone(const fs::path &zone_path) {
     }
 }
 
-auto RecordBuilder::set_name(const std::string &name) -> RecordBuilder & {
+auto RecordBuilder::set_name(const std::string& name) -> RecordBuilder& {
     this->record.r_name = name;
     return *this;
 }
-auto RecordBuilder::set_type(const std::string &type) -> RecordBuilder & {
+auto RecordBuilder::set_type(const std::string& type) -> RecordBuilder& {
     static std::map<std::string, Record::Type> type_value = {
         {"A", Record::Type::A},         {"NS", Record::Type::NS},
         {"CNAME", Record::Type::CNAME}, {"SOA", Record::Type::SOA},
@@ -93,7 +96,7 @@ auto RecordBuilder::set_type(const std::string &type) -> RecordBuilder & {
     return *this;
 }
 
-auto RecordBuilder::set_class(const std::string &r_class) -> RecordBuilder & {
+auto RecordBuilder::set_class(const std::string& r_class) -> RecordBuilder& {
     static std::map<std::string, Record::Class> class_value = {
         {"IN", Record::Class::IN},
         {"CS", Record::Class::CS},
@@ -104,18 +107,18 @@ auto RecordBuilder::set_class(const std::string &r_class) -> RecordBuilder & {
     return *this;
 }
 
-auto RecordBuilder::set_ttl(const std::string &ttl) -> RecordBuilder & {
+auto RecordBuilder::set_ttl(const std::string& ttl) -> RecordBuilder& {
     this->record.r_ttl = std::stoul(ttl);
     return *this;
 }
 
-auto RecordBuilder::set_rdlen(const std::string &dlen) -> RecordBuilder & {
+auto RecordBuilder::set_rdlen(const std::string& dlen) -> RecordBuilder& {
     this->record.r_rdlength = std::stoul(dlen);
     return *this;
 }
 
-auto RecordBuilder::set_rdata(const std::vector<std::string> &data)
-    -> RecordBuilder & {
+auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
+    -> RecordBuilder& {
     this->record.r_rdata = data;
     return *this;
 }
