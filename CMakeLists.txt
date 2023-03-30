@@ -8,8 +8,13 @@ if(NOT TARGET spdlog)
     find_package(spdlog REQUIRED)
 endif()
 
-set(SRC "main.cpp")
-set(TARGET "main")
+set(INCLUDE include)
+set(SRC src/main.cpp src/server.cpp src/utils.cpp)
+set(TARGET main)
 
 add_executable(${TARGET} ${SRC})
+
+target_include_directories(${TARGET} PRIVATE ${INCLUDE})
+
 target_link_libraries(${TARGET} PRIVATE spdlog::spdlog_header_only)
+target_compile_features(${TARGET} PRIVATE cxx_std_17)
