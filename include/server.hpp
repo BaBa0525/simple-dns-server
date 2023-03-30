@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DNS_SERVER_HPP_
+#define DNS_SERVER_HPP_
 
 #include <string>
 
@@ -7,6 +8,8 @@ class Server {
     int sock_fd;
     std::string forward_ip;
 
-    Server& bind_port(long port);
+    static Server bind(uint16_t port);
     Server* load_config();
 };
+
+#endif
