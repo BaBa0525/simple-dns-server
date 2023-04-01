@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "spdlog/fmt/bin_to_hex.h"
 #include "spdlog/spdlog.h"
 #include "utils.hpp"
 
@@ -124,3 +125,29 @@ auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
 }
 
 auto RecordBuilder::build() -> Record { return this->record; }
+
+auto Server::run() -> void {
+    while (1) {
+        auto pkt = receive();
+
+        if (pkt == std::nullopt) {
+            spdlog::warn("Receive packet failed");
+            continue;
+        }
+    }
+}
+
+auto Server::receive() -> std::optional<Packet> {
+
+    sockaddr_in sin{};
+    socklen_t sinlen;
+
+    uint8_t buf[PACKET_SIZE] = {};
+    int ret = recvfrom(this->sock_fd, buf, sizeof(buf), 0,
+                       (struct sockaddr*)&sin, &sinlen);
+
+    if (ret < 0)
+        return std::nullopt;
+
+    return Packet::from_binary(buf, ret);
+}

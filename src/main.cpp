@@ -9,5 +9,7 @@ int main(int argc, char* argv[]) {
     auto server = ServerBuilder().load_config(config_path).bind(port);
     spdlog::info("Server bind to port {}\n", port);
 
+    server.run();
+
     return 0;
 }
