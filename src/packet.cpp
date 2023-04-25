@@ -1,15 +1,5 @@
 #include "packet.hpp"
-
-auto PacketBuilder::from_binary(void* data, size_t plen) -> PacketBuilder& {
-    this->packet.header = Header::from_network(data);
-    this->packet.plen = plen - sizeof(this->packet.header);
-
-    this->packet.payload = std::make_unique<uint8_t[]>(this->packet.plen);
-    std::copy_n(reinterpret_cast<uint8_t*>(data) + sizeof(this->packet.header),
-                this->packet.plen, this->packet.payload.get());
-
-    return *this;
-}
+#include "spdlog/spdlog.h"
 
 auto Header::from_network(void* data) -> Header {
     Header header = *reinterpret_cast<Header*>(data);
@@ -20,6 +10,17 @@ auto Header::from_network(void* data) -> Header {
     header.dns_arcount = ntohs(header.dns_arcount);
 
     return header;
+}
+
+auto Header::to_response(const Header& header) -> Header {
+    Header response = header;
+    response.dns_id = htons(header.dns_id);
+    response.dns_qdcount = htons(header.dns_qdcount);
+    response.dns_ancount = htons(header.dns_ancount);
+    response.dns_nscount = htons(header.dns_nscount);
+    response.dns_arcount = htons(header.dns_arcount);
+
+    return response;
 }
 
 auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen)
@@ -45,11 +46,30 @@ auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen)
     return Query{qname, qtype, qclass};
 }
 
-BufferBuilder::BufferBuilder() : buf{}, nbytes(0) {
-    this->write(reinterpret_cast<void*>(&pkt->header), sizeof(pkt->header))
-        .write(reinterpret_cast<void*>(pkt->payload.get()), pkt->plen);
+auto Packet::raw() const -> std::unique_ptr<uint8_t[]> {
+    size_t size = sizeof(this->header) + this->plen;
+    auto raw = std::make_unique<uint8_t[]>(size);
+
+    Header header = Header::to_response(this->header);
+    std::copy_n(reinterpret_cast<uint8_t*>(&header), sizeof(header), raw.get());
+    std::copy_n(this->payload.get(), this->plen, raw.get() + sizeof(header));
+
+    return std::move(raw);
 }
 
-auto Packet::raw() const -> std::unique_ptr<uint8_t[]> {
-    return std::unique_ptr<uint8_t[]>();
+auto Packet::raw_size() const -> size_t {
+    return sizeof(this->header) + this->plen;
+}
+
+auto Packet::from_binary(void* data, size_t dlen) -> Packet {
+    Packet packet{};
+    packet.header = Header::from_network(data);
+
+    packet.plen = dlen - sizeof(packet.header);
+
+    packet.payload = std::make_unique<uint8_t[]>(packet.plen);
+    std::copy_n(reinterpret_cast<uint8_t*>(data) + sizeof(packet.header),
+                packet.plen, packet.payload.get());
+
+    return packet;
 }

@@ -7,7 +7,7 @@
 
 #include "builder.hpp"
 #include "spdlog/fmt/bin_to_hex.h"
-#include "utils.hpp"
+#include "util.hpp"
 
 auto ServerBuilder::bind(uint16_t port) -> Server {
     sockaddr_in client_sin{.sin_family = AF_INET, .sin_port = htons(port)};
@@ -23,7 +23,7 @@ auto ServerBuilder::bind(uint16_t port) -> Server {
                sizeof(client_sin)) < 0)
         err_quit("Fail to bind client port");
 
-    sockaddr_in forward_sin{.sin_family = AF_INET, .sin_port = htons(port)};
+    sockaddr_in forward_sin{.sin_family = AF_INET, .sin_port = htons(port + 1)};
 
     if ((this->server.forward_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) <
         0)
@@ -67,16 +67,21 @@ auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
 
 auto ServerBuilder::init() -> ServerBuilder& {
 
-    this->server.forward_addr.sin.sin_family = AF_INET;
-    this->server.forward_addr.sin.sin_port = htons(53);
+    this->server.forward_sin = {
+        .sin_family = AF_INET,
+        .sin_port = htons(FORWARD_PORT),
+    };
+
     if (inet_pton(AF_INET, this->forward_ip.data(),
-                  &this->server.forward_addr.sin.sin_addr) <= 0)
+                  &this->server.forward_sin.sin_addr) <= 0)
         err_quit(
             ("Can't convert IPv4 address for " + this->forward_ip).c_str());
 
-    this->register_fn(std::make_unique<QueryHandler>(AHandler()))
-        .register_fn(std::make_unique<QueryHandler>(AHandler()))
-        .register_fn(std::make_unique<QueryHandler>(AHandler()));
+    // this->register_fn(std::make_unique<QueryHandler>(AHandler()))
+    //     .register_fn(std::make_unique<QueryHandler>(AHandler()))
+    //     .register_fn(std::make_unique<QueryHandler>(AHandler()));
+
+    return *this;
 }
 
 void ServerBuilder::load_zone(const fs::path& zone_path) {
@@ -154,3 +159,25 @@ auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
 }
 
 auto RecordBuilder::build() -> Record { return this->record; }
+
+auto PacketBuilder::write(void* data, size_t dlen) -> PacketBuilder& {
+    std::copy_n(reinterpret_cast<uint8_t*>(data), dlen,
+                this->buffer + this->nbytes);
+    this->nbytes += dlen;
+    return *this;
+}
+
+auto PacketBuilder::create() -> Packet {
+    size_t header_len = sizeof(this->packet.header);
+    this->packet.plen = this->nbytes - header_len;
+
+    std::copy_n(this->buffer, header_len,
+                reinterpret_cast<uint8_t*>(&this->packet.header));
+
+    spdlog::debug("packet plen: {}", this->packet.plen);
+
+    this->packet.payload = std::make_unique<uint8_t[]>(this->packet.plen);
+    std::copy_n(this->buffer, this->packet.plen, this->packet.payload.get());
+
+    return std::move(this->packet);
+}

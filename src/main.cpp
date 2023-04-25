@@ -1,7 +1,7 @@
 #include "builder.hpp"
 #include "server.hpp"
 #include "spdlog/spdlog.h"
-#include "utils.hpp"
+#include "util.hpp"
 
 int main(int argc, char* argv[], char* envp[]) {
     spdlog::set_level(spdlog::level::info);
@@ -11,7 +11,7 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     auto [port, config_path] = parse_args(argc, argv);
-    auto server = ServerBuilder().load_config(config_path).bind(port);
+    auto server = ServerBuilder().load_config(config_path).init().bind(port);
     spdlog::info("Server bind to port {}\n", port);
 
     server.run();
