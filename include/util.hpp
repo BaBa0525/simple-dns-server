@@ -25,10 +25,11 @@ auto split(const std::string& str, char delim = ' ')
     -> std::vector<std::string>;
 
 template <typename Container, typename Predicate>
-auto filter(Container&& container, Predicate&& predicate) -> Container {
+auto filter(const Container& container, Predicate&& predicate) -> Container {
     Container result;
     std::copy_if(std::begin(container), std::end(container),
-                 std::back_inserter(result), predicate);
+                 std::back_inserter(result),
+                 std::forward<Predicate>(predicate));
     return result;
 }
 
