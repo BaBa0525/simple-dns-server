@@ -36,16 +36,65 @@ struct Header {
     static auto from_network(void* data) -> Header;
 } __attribute__((packed));
 
-struct Packet {
-    Header header;
-    std::unique_ptr<uint8_t[]> data;
-    uint16_t dlen;
+class HeaderBuilder {
+  public:
+    HeaderBuilder() {}
+    HeaderBuilder(const Header& header) : header(header) {}
 
-    static auto from_binary(void* data, size_t dlen) -> Packet;
+    auto from_network(void* data) -> HeaderBuilder&;
+    auto to_response() -> HeaderBuilder&;
+    auto set_ancount() -> HeaderBuilder&;
+    auto set_nscount() -> HeaderBuilder&;
+    auto set_arcount() -> HeaderBuilder&;
+    auto create() -> Header;
+
+  private:
+    Header header;
 };
 
-struct Question {
-    std::string dns_qname;
-    uint16_t dns_qtype;
-    uint16_t dns_qclass;
+class Packet {
+  public:
+    Header header;
+    std::unique_ptr<uint8_t[]> payload;
+    size_t plen;
+
+    auto raw() const -> std::unique_ptr<uint8_t[]>;
+    auto raw_size() const -> size_t;
+};
+
+class PacketBuilder {
+  public:
+    auto from_binary(void* data, size_t plen) -> PacketBuilder&;
+    auto write(void* data, size_t dlen) -> PacketBuilder&;
+    auto create() -> Packet;
+
+  private:
+    Packet packet;
+    uint8_t buffer[PACKET_SIZE];
+};
+
+struct Query {
+    std::string qname;
+    uint16_t qtype;
+    uint16_t qclass;
+
+    static auto from_binary(const std::unique_ptr<uint8_t[]>& payload,
+                            size_t plen) -> Query;
+};
+
+struct Buffer {
+    uint8_t data[512];
+} __attribute__((packed));
+
+class BufferBuilder {
+  public:
+    BufferBuilder() : buf{}, nbytes(0) {}
+    BufferBuilder(Packet pkt);
+
+    auto write(void* data, size_t dlen) -> BufferBuilder&;
+    auto create() -> std::pair<Buffer, size_t>;
+
+  private:
+    Buffer buf;
+    size_t nbytes;
 };

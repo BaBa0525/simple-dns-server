@@ -1,6 +1,7 @@
 #ifndef DNS_SERVER_HPP_
 #define DNS_SERVER_HPP_
 
+#include <arpa/inet.h>
 #include <filesystem>
 #include <map>
 #include <optional>
@@ -8,8 +9,10 @@
 #include <vector>
 
 #include "packet.hpp"
+#include "strategy.hpp"
 
 namespace fs = std::filesystem;
+constexpr int FORWARD_PORT = 5353;
 
 class Record {
   public:
@@ -32,39 +35,32 @@ class Record {
     std::vector<std::string> r_rdata;
 };
 
-class RecordBuilder {
-  public:
-    Record record;
-
-    auto set_name(const std::string& name) -> RecordBuilder&;
-    auto set_type(const std::string& type) -> RecordBuilder&;
-    auto set_class(const std::string& r_class) -> RecordBuilder&;
-    auto set_ttl(const std::string& ttl) -> RecordBuilder&;
-    auto set_rdlen(const std::string& dlen) -> RecordBuilder&;
-    auto set_rdata(const std::vector<std::string>& data) -> RecordBuilder&;
-
-    auto build() -> Record;
+struct Address {
+    sockaddr_in sin{};
+    socklen_t sinlen;
 };
 
 class Server {
+    friend class ServerBuilder;
+
   public:
-    int sock_fd;
-    std::string forward_ip;
+    int client_sock, forward_sock;
+    Address forward_addr;
+
     std::map<std::string, std::vector<Record>> records;
     auto run() -> void;
 
   private:
-    auto receive() -> std::optional<Packet>;
-};
+    std::map<Record::Type, QueryHandler> registered_handler;
 
-class ServerBuilder {
-  public:
-    Server server;
-    auto load_config(const fs::path& config_path) -> ServerBuilder&;
-    auto bind(uint16_t port) -> Server;
-
-  private:
-    void load_zone(const fs::path& zone_path);
+    auto create_response(std::function<void(Query)> cb) -> Packet;
+    auto forward(const Packet& packet) -> std::optional<Packet>;
+    auto send(int sock_fd, std::unique_ptr<uint8_t[]> pkt, size_t nbytes,
+              Address addr) -> void;
+    auto receive(int sock_fd) -> std::optional<std::pair<Packet, Address>>;
+    auto search_domain(const std::string& qname) -> std::optional<std::string>;
+    auto search_records(const std::string& qname, uint16_t qtype,
+                        uint16_t qclass) -> std::vector<Record>;
 };
 
 #endif

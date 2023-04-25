@@ -9,7 +9,7 @@ if(NOT TARGET spdlog)
 endif()
 
 set(INCLUDE include)
-set(SRC src/main.cpp src/server.cpp src/utils.cpp src/packet.cpp)
+set(SRC src/main.cpp src/server.cpp src/utils.cpp src/packet.cpp src/builder.cpp)
 set(TARGET main)
 
 add_executable(${TARGET} ${SRC})
