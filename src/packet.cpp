@@ -29,8 +29,10 @@ auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen)
     std::string qname;
 
     while (true) {
-        if (label_len <= 0 || plen < cursor)
+        if (label_len <= 0 || plen < cursor) {
             break;
+        }
+
         qname.append(reinterpret_cast<char*>(&payload[cursor]), label_len);
         qname.push_back('.');
         cursor += label_len;

@@ -12,48 +12,59 @@
 auto ServerBuilder::bind(uint16_t port) -> Server {
     sockaddr_in client_sin{.sin_family = AF_INET, .sin_port = htons(port)};
 
-    if ((this->server.client_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) <
-        0)
+    this->server.client_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if ((this->server.client_sock) < 0) {
         err_quit("Fail to build user socket");
+    }
 
     int on = 1;
     setsockopt(this->server.client_sock, SOL_SOCKET, SO_REUSEADDR, &on,
                sizeof(on));
+
     if (::bind(this->server.client_sock, (sockaddr*)&client_sin,
-               sizeof(client_sin)) < 0)
+               sizeof(client_sin)) < 0) {
         err_quit("Fail to bind client port");
+    }
 
     sockaddr_in forward_sin{.sin_family = AF_INET, .sin_port = htons(port + 1)};
 
-    if ((this->server.forward_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) <
-        0)
+    this->server.forward_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if ((this->server.forward_sock) < 0) {
         err_quit("Fail to build forward socket");
+    }
 
     on = 1;
     setsockopt(this->server.forward_sock, SOL_SOCKET, SO_REUSEADDR, &on,
                sizeof(on));
+
     if (::bind(this->server.forward_sock, (sockaddr*)&forward_sin,
-               sizeof(forward_sin)) < 0)
+               sizeof(forward_sin)) < 0) {
         err_quit("Fail to bind forward port");
+    }
 
     return this->server;
 }
 
 auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
     std::ifstream ifs(config_path);
-    if (!ifs.is_open())
+    if (!ifs.is_open()) {
         err_quit("Fail to open config file");
+    }
+
     spdlog::info("Reading config file {}", config_path.string());
 
-    if (!std::getline(ifs, this->forward_ip))
+    if (!std::getline(ifs, this->forward_ip)) {
         err_quit("Fail to get forward ip");
+    }
+
     this->forward_ip = trim(this->forward_ip);
 
     std::string line;
     while (std::getline(ifs, line)) {
         auto split_line = split(line, ',');
-        if (split_line.size() < 2)
+        if (split_line.size() < 2) {
             err_quit("config file format incorrect");
+        }
 
         std::string domain = std::move(split_line[0]);
         std::string filename = std::move(split_line[1]);
@@ -72,10 +83,13 @@ auto ServerBuilder::init() -> ServerBuilder& {
         .sin_port = htons(FORWARD_PORT),
     };
 
-    if (inet_pton(AF_INET, this->forward_ip.data(),
-                  &this->server.forward_sin.sin_addr) <= 0)
+    int ret = inet_pton(AF_INET, this->forward_ip.data(),
+                        &this->server.forward_sin.sin_addr);
+
+    if (ret <= 0) {
         err_quit(
             ("Can't convert IPv4 address for " + this->forward_ip).c_str());
+    }
 
     // this->register_fn(std::make_unique<QueryHandler>(AHandler()))
     //     .register_fn(std::make_unique<QueryHandler>(AHandler()))
@@ -86,12 +100,15 @@ auto ServerBuilder::init() -> ServerBuilder& {
 
 void ServerBuilder::load_zone(const fs::path& zone_path) {
     std::ifstream ifs(zone_path);
-    if (!ifs.is_open())
+    if (!ifs.is_open()) {
         err_quit("Fail to open zone file");
+    }
 
     std::string domain, line;
-    if (!std::getline(ifs, domain))
+    if (!std::getline(ifs, domain)) {
         err_quit("Fail to get domain");
+    }
+
     domain = trim(domain);
 
     while (std::getline(ifs, line)) {

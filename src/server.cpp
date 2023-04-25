@@ -37,11 +37,13 @@ auto Server::run() -> void {
                 spdlog::warn("forward server not response");
                 continue;
             }
+
             auto error = this->send(this->client_sock, ret_pkt->raw(),
                                     ret_pkt->raw_size(), sender);
 
-            if (error)
+            if (error) {
                 spdlog::warn("Fail to send forward packet: {}", error.value());
+            }
 
             continue;
         }
@@ -62,8 +64,9 @@ auto Server::receive(int sock_fd)
     int ret = recvfrom(sock_fd, buf, sizeof(buf), 0,
                        reinterpret_cast<sockaddr*>(&sin), &sinlen);
 
-    if (ret < 0)
+    if (ret < 0) {
         return {};
+    }
 
     return std::pair{Packet::from_binary(buf, ret), sin};
 }
@@ -93,17 +96,20 @@ auto Server::send(int sock_fd, const std::unique_ptr<uint8_t[]>& pkt,
 
     int ret = sendto(sock_fd, pkt.get(), nbytes, 0,
                      reinterpret_cast<sockaddr*>(&sin), sizeof(sin));
+
     if (ret < 0) {
         return strerror(errno);
     }
+
     return {};
 }
 
 auto Server::search_domain(const std::string& qname)
     -> std::optional<std::string> {
     for (const auto& [domain_name, domain_records] : this->records) {
-        if (qname.find(domain_name) != std::string::npos)
+        if (qname.find(domain_name) != std::string::npos) {
             return domain_name;
+        }
     }
     return {};
 }
@@ -112,8 +118,9 @@ auto Server::search_records(const std::string& qname, uint16_t qtype,
                             uint16_t qclass) -> std::vector<Record> {
 
     auto domain_name = search_domain(qname);
-    if (!domain_name)
+    if (!domain_name) {
         return {};
+    }
 
     std::string subdomain;
     if (qname == *domain_name) {
@@ -125,8 +132,9 @@ auto Server::search_records(const std::string& qname, uint16_t qtype,
 
     std::vector<Record> ret, domain_records = this->records[*domain_name];
     for (const auto& record : domain_records) {
-        if (record.r_name != subdomain || record.r_type != qtype)
+        if (record.r_name != subdomain || record.r_type != qtype) {
             continue;
+        }
         ret.push_back(record);
     }
 
