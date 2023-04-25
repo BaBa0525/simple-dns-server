@@ -1,6 +1,7 @@
 #ifndef BUILDER_HPP_
 #define BUILDER_HPP_
 
+#include "packet.hpp"
 #include "server.hpp"
 
 class ServerBuilder {
@@ -29,6 +30,31 @@ class RecordBuilder {
     auto set_rdata(const std::vector<std::string>& data) -> RecordBuilder&;
 
     auto build() -> Record;
+};
+
+class HeaderBuilder {
+  public:
+    HeaderBuilder() {}
+    HeaderBuilder(const Header& header) : header(header) {}
+
+    auto set_ancount() -> HeaderBuilder&;
+    auto set_nscount() -> HeaderBuilder&;
+    auto set_arcount() -> HeaderBuilder&;
+    auto create() -> Header;
+
+  private:
+    Header header;
+};
+
+class PacketBuilder {
+  public:
+    auto write(void* data, size_t nbytes) -> PacketBuilder&;
+    auto create() -> Packet;
+
+  private:
+    Packet packet;
+    uint8_t buffer[PACKET_SIZE];
+    size_t nbytes;
 };
 
 #endif
