@@ -23,8 +23,7 @@ auto Header::to_response(const Header& header) -> Header {
     return response;
 }
 
-auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen)
-    -> Query {
+auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen) -> Query {
     uint16_t cursor = 0, label_len = payload[cursor++];
     std::string qname;
 
@@ -59,9 +58,7 @@ auto Packet::raw() const -> std::unique_ptr<uint8_t[]> {
     return std::move(raw);
 }
 
-auto Packet::raw_size() const -> size_t {
-    return sizeof(this->header) + this->plen;
-}
+auto Packet::raw_size() const -> size_t { return sizeof(this->header) + this->plen; }
 
 auto Packet::from_binary(void* data, size_t dlen) -> Packet {
     Packet packet{};
@@ -70,8 +67,8 @@ auto Packet::from_binary(void* data, size_t dlen) -> Packet {
     packet.plen = dlen - sizeof(packet.header);
 
     packet.payload = std::make_unique<uint8_t[]>(packet.plen);
-    std::copy_n(reinterpret_cast<uint8_t*>(data) + sizeof(packet.header),
-                packet.plen, packet.payload.get());
+    std::copy_n(reinterpret_cast<uint8_t*>(data) + sizeof(packet.header), packet.plen,
+                packet.payload.get());
 
     return packet;
 }

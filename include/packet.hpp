@@ -56,8 +56,7 @@ struct Query {
     uint16_t qtype;
     uint16_t qclass;
 
-    static auto from_binary(const std::unique_ptr<uint8_t[]>& payload,
-                            size_t plen) -> Query;
+    static auto from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen) -> Query;
 };
 
 #endif // PACKET_HPP_
