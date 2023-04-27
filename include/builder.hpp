@@ -5,21 +5,21 @@
 #include "server.hpp"
 
 class ServerBuilder {
-  public:
+   public:
     Server server;
     auto load_config(const fs::path& config_path) -> ServerBuilder&;
     auto init() -> ServerBuilder&;
     auto bind(uint16_t port) -> Server;
 
-  private:
+   private:
     std::string forward_ip;
 
-    auto register_fn(std::unique_ptr<QueryHandler> handler) -> ServerBuilder&;
+    auto register_fn(std::shared_ptr<QueryResponder> handler) -> ServerBuilder&;
     void load_zone(const fs::path& zone_path);
 };
 
 class RecordBuilder {
-  public:
+   public:
     Record record;
 
     auto set_name(const std::string& name) -> RecordBuilder&;
@@ -33,7 +33,7 @@ class RecordBuilder {
 };
 
 class HeaderBuilder {
-  public:
+   public:
     HeaderBuilder() {}
     HeaderBuilder(const Header& header) : header(header) {}
 
@@ -42,16 +42,16 @@ class HeaderBuilder {
     auto set_arcount() -> HeaderBuilder&;
     auto create() -> Header;
 
-  private:
+   private:
     Header header;
 };
 
 class PacketBuilder {
-  public:
+   public:
     auto write(void* data, size_t nbytes) -> PacketBuilder&;
     auto create() -> Packet;
 
-  private:
+   private:
     Packet packet;
     uint8_t buffer[PACKET_SIZE];
     size_t nbytes;
