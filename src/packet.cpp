@@ -51,18 +51,19 @@ auto Query::from_binary(const std::unique_ptr<uint8_t[]>& payload, size_t plen)
 }
 
 auto Query::raw() const -> std::unique_ptr<uint8_t[]> {
+    std::vector<uint8_t> compressed = compress_domain(this->qname);
+
     size_t size =
-        sizeof(this->qname) + sizeof(this->qtype) + sizeof(this->qclass);
+        compressed.size() + sizeof(this->qtype) + sizeof(this->qclass);
 
     auto raw = std::make_unique<uint8_t[]>(size);
-    std::vector<uint8_t> compressed = compress_domain(this->qname);
 
     uint8_t* cursor = raw.get();
     cursor = std::copy_n(compressed.data(), compressed.size(), cursor);
 
     uint16_t qtype = htons(this->qtype);
-    std::copy_n(reinterpret_cast<uint8_t*>(&qtype), sizeof(qtype), cursor);
-    cursor += sizeof(qtype);
+    cursor =
+        std::copy_n(reinterpret_cast<uint8_t*>(&qtype), sizeof(qtype), cursor);
 
     uint16_t qclass = htons(this->qclass);
     std::copy_n(reinterpret_cast<uint8_t*>(&qclass), sizeof(qclass), cursor);
@@ -71,16 +72,19 @@ auto Query::raw() const -> std::unique_ptr<uint8_t[]> {
 }
 
 auto Query::raw_size() const -> size_t {
-    return sizeof(this->qname) + sizeof(this->qtype) + sizeof(this->qclass);
+    std::vector<uint8_t> compressed = compress_domain(this->qname);
+    return compressed.size() + sizeof(this->qtype) + sizeof(this->qclass);
 }
 
 auto Packet::raw() const -> std::unique_ptr<uint8_t[]> {
     size_t size = sizeof(this->header) + this->plen;
     auto raw = std::make_unique<uint8_t[]>(size);
 
-    Header header = Header::to_response(this->header);
-    std::copy_n(reinterpret_cast<uint8_t*>(&header), sizeof(header), raw.get());
-    std::copy_n(this->payload.get(), this->plen, raw.get() + sizeof(header));
+    std::copy_n(reinterpret_cast<const uint8_t*>(&this->header),
+                sizeof(this->header), raw.get());
+
+    std::copy_n(this->payload.get(), this->plen,
+                raw.get() + sizeof(this->header));
 
     return std::move(raw);
 }

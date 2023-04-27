@@ -10,6 +10,7 @@
 
 #include "builder.hpp"
 #include "spdlog/spdlog.h"
+#include "strategy.hpp"
 #include "util.hpp"
 
 auto Server::run() -> void {
@@ -24,22 +25,20 @@ auto Server::run() -> void {
         auto [pkt, sender] = std::move(data.value());
         auto [qname, qtype, qclass] = Query::from_binary(pkt.payload, pkt.plen);
 
-        spdlog::debug("[qname] {}", qname);
-        spdlog::debug("[qtype] {}", qtype);
-        spdlog::debug("[qclass] {}", qclass);
+        auto domain_name = search_domain(qname);
 
-        auto records = this->search_records(qname, qtype, qclass);
-
-        if (records.empty()) {
+        if (!domain_name) {
             // pass to another dns server
+            pkt.header = Header::to_response(pkt.header);
             auto ret_pkt = this->forward(pkt);
             if (!data) {
                 spdlog::warn("forward server not response");
                 continue;
             }
 
-            auto error = this->send(
-                this->client_sock, ret_pkt->raw(), ret_pkt->raw_size(), sender);
+            ret_pkt->header = Header::to_response(ret_pkt->header);
+            auto error = this->send(this->client_sock, ret_pkt->raw(),
+                                    ret_pkt->raw_size(), sender);
 
             if (error) {
                 spdlog::warn("Fail to send forward packet: {}", error.value());
@@ -48,11 +47,34 @@ auto Server::run() -> void {
             continue;
         }
 
-        spdlog::debug("[rname]{}", records[0].r_name);
+        auto records = search_records(qname, qtype, qclass);
 
-        // this->registered_handler[Record::A].process(
-        //     Query{qname, qtype, qclass});
+        if (records.empty()) {
+            auto SOA_records =
+                search_records(domain_name.value(), Record::SOA, Record::IN);
+
+            if (SOA_records.empty()) {
+                spdlog::warn("No SOA record found in {}", domain_name.value());
+                continue;
+            }
+
+            // Pass the domain name to the responder
+            SOA_records[0].r_name = domain_name.value();
+
+            Packet ret_pkt = NotFoundResponder().response(SOA_records, pkt);
+            auto error = this->send(this->client_sock, ret_pkt.raw(),
+                                    ret_pkt.raw_size(), sender);
+
+            if (error) {
+                spdlog::warn("Fail to send not found packet: {}",
+                             error.value());
+            }
+            continue;
+        }
     }
+
+    // this->registered_handler[Record::A].response(
+    //     Query{qname, qtype, qclass});
 }
 
 auto Server::receive(int sock_fd)
@@ -62,7 +84,7 @@ auto Server::receive(int sock_fd)
     uint8_t buf[PACKET_SIZE] = {};
 
     int ret = recvfrom(sock_fd, buf, sizeof(buf), 0,
-        reinterpret_cast<sockaddr*>(&sin), &sinlen);
+                       reinterpret_cast<sockaddr*>(&sin), &sinlen);
 
     if (ret < 0) {
         return {};
@@ -72,8 +94,8 @@ auto Server::receive(int sock_fd)
 }
 
 auto Server::forward(const Packet& packet) -> std::optional<Packet> {
-    auto error = this->send(
-        this->forward_sock, packet.raw(), packet.raw_size(), this->forward_sin);
+    auto error = this->send(this->forward_sock, packet.raw(), packet.raw_size(),
+                            this->forward_sin);
 
     if (error) {
         spdlog::warn("Fail to forward to server: {}", error.value());
@@ -91,9 +113,10 @@ auto Server::forward(const Packet& packet) -> std::optional<Packet> {
 }
 
 auto Server::send(int sock_fd, const std::unique_ptr<uint8_t[]>& pkt,
-    size_t nbytes, sockaddr_in sin) -> std::optional<ErrorMessage> {
+                  size_t nbytes, sockaddr_in sin)
+    -> std::optional<ErrorMessage> {
     int ret = sendto(sock_fd, pkt.get(), nbytes, 0,
-        reinterpret_cast<sockaddr*>(&sin), sizeof(sin));
+                     reinterpret_cast<sockaddr*>(&sin), sizeof(sin));
 
     if (ret < 0) {
         return strerror(errno);
@@ -113,7 +136,7 @@ auto Server::search_domain(const std::string& qname)
 }
 
 auto Server::search_records(const std::string& qname, uint16_t qtype,
-    uint16_t qclass) -> std::vector<Record> {
+                            uint16_t qclass) -> std::vector<Record> {
     auto domain_name = search_domain(qname);
     if (!domain_name) {
         return {};

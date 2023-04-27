@@ -1,18 +1,35 @@
 #ifndef STRATEGY_HPP_
 #define STRATEGY_HPP_
 
-#include "packet.hpp"
+#include <vector>
 
-class QueryHandler {
+#include "packet.hpp"
+#include "record.hpp"
+
+struct RecordParmas {
+    uint16_t r_type;
+    uint16_t r_class;
+    uint32_t r_ttl;
+    uint16_t r_rdlength;
+} __attribute__((packed));
+
+class QueryResponder {
    public:
-    virtual auto query_type() -> std::string = 0;
-    virtual auto process(const Query& query) -> void = 0;
+    virtual ~QueryResponder() = default;
+    virtual auto response(const std::vector<Record>& records,
+                          const Packet& packet) -> Packet = 0;
 };
 
-class AHandler : public QueryHandler {
+class ARecordResponder : public QueryResponder {
    public:
-    auto query_type() -> std::string override;
-    auto process(const Query& query) -> void override;
+    auto response(const std::vector<Record>& records, const Packet& packet)
+        -> Packet override;
+};
+
+class NotFoundResponder : public QueryResponder {
+   public:
+    auto response(const std::vector<Record>& records, const Packet& packet)
+        -> Packet override;
 };
 
 #endif
