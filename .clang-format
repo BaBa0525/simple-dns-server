@@ -1,10 +1,9 @@
 ---
-BaseOnStyle: Google
+BasedOnStyle: Google
 DerivePointerAlignment: false
 PointerAlignment: Left
 IndentWidth: 4
 TabWidth: 4
 UseTab: false
-ColumnLimit: 100
 ---
 

@@ -1,14 +1,14 @@
 #include "server.hpp"
 
 #include <arpa/inet.h>
-#include <fstream>
-#include <iostream>
 #include <netinet/in.h>
-#include <sstream>
 #include <sys/socket.h>
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 #include "builder.hpp"
-#include "spdlog/fmt/bin_to_hex.h"
 #include "spdlog/spdlog.h"
 #include "util.hpp"
 
@@ -38,7 +38,8 @@ auto Server::run() -> void {
                 continue;
             }
 
-            auto error = this->send(this->client_sock, ret_pkt->raw(), ret_pkt->raw_size(), sender);
+            auto error = this->send(
+                this->client_sock, ret_pkt->raw(), ret_pkt->raw_size(), sender);
 
             if (error) {
                 spdlog::warn("Fail to send forward packet: {}", error.value());
@@ -54,12 +55,14 @@ auto Server::run() -> void {
     }
 }
 
-auto Server::receive(int sock_fd) -> std::optional<std::pair<Packet, sockaddr_in>> {
+auto Server::receive(int sock_fd)
+    -> std::optional<std::pair<Packet, sockaddr_in>> {
     sockaddr_in sin{};
     socklen_t sinlen = sizeof(sin);
     uint8_t buf[PACKET_SIZE] = {};
 
-    int ret = recvfrom(sock_fd, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&sin), &sinlen);
+    int ret = recvfrom(sock_fd, buf, sizeof(buf), 0,
+        reinterpret_cast<sockaddr*>(&sin), &sinlen);
 
     if (ret < 0) {
         return {};
@@ -69,7 +72,8 @@ auto Server::receive(int sock_fd) -> std::optional<std::pair<Packet, sockaddr_in
 }
 
 auto Server::forward(const Packet& packet) -> std::optional<Packet> {
-    auto error = this->send(this->forward_sock, packet.raw(), packet.raw_size(), this->forward_sin);
+    auto error = this->send(
+        this->forward_sock, packet.raw(), packet.raw_size(), this->forward_sin);
 
     if (error) {
         spdlog::warn("Fail to forward to server: {}", error.value());
@@ -86,10 +90,10 @@ auto Server::forward(const Packet& packet) -> std::optional<Packet> {
     return std::move(data->first);
 }
 
-auto Server::send(int sock_fd, const std::unique_ptr<uint8_t[]>& pkt, size_t nbytes,
-                  sockaddr_in sin) -> std::optional<ErrorMessage> {
-
-    int ret = sendto(sock_fd, pkt.get(), nbytes, 0, reinterpret_cast<sockaddr*>(&sin), sizeof(sin));
+auto Server::send(int sock_fd, const std::unique_ptr<uint8_t[]>& pkt,
+    size_t nbytes, sockaddr_in sin) -> std::optional<ErrorMessage> {
+    int ret = sendto(sock_fd, pkt.get(), nbytes, 0,
+        reinterpret_cast<sockaddr*>(&sin), sizeof(sin));
 
     if (ret < 0) {
         return strerror(errno);
@@ -98,7 +102,8 @@ auto Server::send(int sock_fd, const std::unique_ptr<uint8_t[]>& pkt, size_t nby
     return {};
 }
 
-auto Server::search_domain(const std::string& qname) -> std::optional<std::string> {
+auto Server::search_domain(const std::string& qname)
+    -> std::optional<std::string> {
     for (const auto& [domain_name, domain_records] : this->records) {
         if (qname.find(domain_name) != std::string::npos) {
             return domain_name;
@@ -107,9 +112,8 @@ auto Server::search_domain(const std::string& qname) -> std::optional<std::strin
     return {};
 }
 
-auto Server::search_records(const std::string& qname, uint16_t qtype, uint16_t qclass)
-    -> std::vector<Record> {
-
+auto Server::search_records(const std::string& qname, uint16_t qtype,
+    uint16_t qclass) -> std::vector<Record> {
     auto domain_name = search_domain(qname);
     if (!domain_name) {
         return {};
@@ -131,7 +135,9 @@ auto Server::search_records(const std::string& qname, uint16_t qtype, uint16_t q
         ret.push_back(record);
     }
 
-    return filter(domain_records, [&subdomain, qtype, qclass](const Record& record) {
-        return (record.r_name == subdomain && record.r_type == qtype && record.r_class == qclass);
-    });
+    return filter(
+        domain_records, [&subdomain, qtype, qclass](const Record& record) {
+            return (record.r_name == subdomain && record.r_type == qtype &&
+                    record.r_class == qclass);
+        });
 }
