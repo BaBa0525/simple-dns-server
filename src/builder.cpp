@@ -67,6 +67,7 @@ auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
             err_quit("config file format incorrect");
         }
 
+        // TODO: why move?
         std::string domain = std::move(split_line[0]);
         std::string filename = std::move(split_line[1]);
 
@@ -91,9 +92,9 @@ auto ServerBuilder::init() -> ServerBuilder& {
             ("Can't convert IPv4 address for " + this->forward_ip).c_str());
     }
 
-    // this->register_fn(std::make_unique<QueryHandler>(AHandler()))
-    //     .register_fn(std::make_unique<QueryHandler>(AHandler()))
-    //     .register_fn(std::make_unique<QueryHandler>(AHandler()));
+    // this->register_fn(std::make_unique<ARecordResponder>())
+    //     .register_fn(std::make_unique<ARecordResponder>())
+    //     .register_fn(std::make_unique<ARecordResponder>());
 
     return *this;
 }
@@ -164,11 +165,6 @@ auto RecordBuilder::set_ttl(const std::string& ttl) -> RecordBuilder& {
     return *this;
 }
 
-auto RecordBuilder::set_rdlen(const std::string& dlen) -> RecordBuilder& {
-    this->record.r_rdlength = std::stoul(dlen);
-    return *this;
-}
-
 auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
     -> RecordBuilder& {
     this->record.r_rdata = data;
@@ -178,6 +174,7 @@ auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
 auto RecordBuilder::build() -> Record { return this->record; }
 
 auto PacketBuilder::write(void* data, size_t dlen) -> PacketBuilder& {
+    spdlog::debug("Write from {} to {}", this->nbytes, this->nbytes + dlen);
     std::copy_n(reinterpret_cast<uint8_t*>(data), dlen,
                 this->buffer + this->nbytes);
     this->nbytes += dlen;
@@ -194,7 +191,8 @@ auto PacketBuilder::create() -> Packet {
     spdlog::debug("packet plen: {}", this->packet.plen);
 
     this->packet.payload = std::make_unique<uint8_t[]>(this->packet.plen);
-    std::copy_n(this->buffer, this->packet.plen, this->packet.payload.get());
+    std::copy_n(this->buffer + header_len, this->packet.plen,
+                this->packet.payload.get());
 
     return std::move(this->packet);
 }

@@ -26,7 +26,6 @@ class RecordBuilder {
     auto set_type(const std::string& type) -> RecordBuilder&;
     auto set_class(const std::string& r_class) -> RecordBuilder&;
     auto set_ttl(const std::string& ttl) -> RecordBuilder&;
-    auto set_rdlen(const std::string& dlen) -> RecordBuilder&;
     auto set_rdata(const std::vector<std::string>& data) -> RecordBuilder&;
 
     auto build() -> Record;
@@ -48,6 +47,7 @@ class HeaderBuilder {
 
 class PacketBuilder {
    public:
+    PacketBuilder() : nbytes(0) {}
     auto write(void* data, size_t nbytes) -> PacketBuilder&;
     auto create() -> Packet;
 
