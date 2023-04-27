@@ -31,3 +31,17 @@ auto split(const std::string& str, char delim) -> std::vector<std::string> {
 
     return result;
 }
+
+auto compress_domain(std::string domain) -> std::vector<uint8_t> {
+    std::vector<std::string> labels = split(domain, '.');
+    std::vector<uint8_t> compressed{};
+
+    for (auto& label : labels) {
+        spdlog::debug("compressing label {}", label);
+        compressed.push_back(static_cast<uint8_t>(label.size()));
+        compressed.insert(compressed.end(), label.begin(), label.end());
+    }
+    compressed.push_back(0);
+
+    return compressed;
+}

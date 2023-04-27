@@ -28,8 +28,11 @@ template <typename Container, typename Predicate>
 auto filter(const Container& container, Predicate&& predicate) -> Container {
     Container result;
     std::copy_if(std::begin(container), std::end(container),
-        std::back_inserter(result), std::forward<Predicate>(predicate));
+                 std::back_inserter(result),
+                 std::forward<Predicate>(predicate));
     return result;
 }
+
+auto compress_domain(std::string domain) -> std::vector<uint8_t>;
 
 #endif
