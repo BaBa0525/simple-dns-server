@@ -37,7 +37,6 @@ auto compress_domain(std::string domain) -> std::vector<uint8_t> {
     std::vector<uint8_t> compressed{};
 
     for (auto& label : labels) {
-        spdlog::debug("compressing label {}", label);
         compressed.push_back(static_cast<uint8_t>(label.size()));
         compressed.insert(compressed.end(), label.begin(), label.end());
     }
