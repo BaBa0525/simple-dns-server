@@ -36,11 +36,6 @@ class HeaderBuilder {
     HeaderBuilder() {}
     HeaderBuilder(const Header& header) : header(header) {}
 
-    auto set_ancount() -> HeaderBuilder&;
-    auto set_nscount() -> HeaderBuilder&;
-    auto set_arcount() -> HeaderBuilder&;
-    auto create() -> Header;
-
    private:
     Header header;
 };
