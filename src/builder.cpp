@@ -80,7 +80,6 @@ auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
             err_quit("config file format incorrect");
         }
 
-        // TODO: why move?
         std::string domain = std::move(split_line[0]);
         std::string filename = std::move(split_line[1]);
 
