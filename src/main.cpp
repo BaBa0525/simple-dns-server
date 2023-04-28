@@ -11,7 +11,11 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     auto [port, config_path] = parse_args(argc, argv);
-    auto server = ServerBuilder().load_config(config_path).init().bind(port);
+    auto server =
+        ServerBuilder()
+            .load_config(config_path)
+            .register_fn(Record::Type::A, std::make_shared<ARecordResponder>())
+            .bind(port);
     spdlog::info("Server bind to port {}\n", port);
 
     server.run();

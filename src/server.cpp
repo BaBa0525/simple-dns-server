@@ -66,10 +66,22 @@ auto Server::run() -> void {
             }
             continue;
         }
-    }
+        auto ret_pkt =
+            this->registered_handler[static_cast<Record::Type>(qtype)]
+                ->response(this->collection, pkt);
 
-    // this->registered_handler[Record::A].response(
-    //     Query{qname, qtype, qclass});
+        if (!ret_pkt) {
+            spdlog::warn("Fail to build response packet");
+            continue;
+        }
+
+        auto error = this->send(this->client_sock, ret_pkt->raw(),
+                                ret_pkt->raw_size(), sender);
+
+        if (error) {
+            spdlog::warn("Fail to send response packet: {}", error.value());
+        }
+    }
 }
 
 auto Server::receive(int sock_fd)
@@ -89,19 +101,25 @@ auto Server::receive(int sock_fd)
 }
 
 auto Server::forward(const Packet& packet) -> std::optional<Packet> {
+    spdlog::debug("before send");
+
     auto error = this->send(this->forward_sock, packet.raw(), packet.raw_size(),
                             this->forward_sin);
+
+    spdlog::debug("after send");
 
     if (error) {
         spdlog::warn("Fail to forward to server: {}", error.value());
         return {};
     }
 
+    spdlog::debug("before receive");
     auto data = this->receive(this->forward_sock);
     if (!data) {
         spdlog::warn("forward server not response");
         return {};
     }
+    spdlog::debug("after receive");
 
     // return packet
     return std::move(data->first);

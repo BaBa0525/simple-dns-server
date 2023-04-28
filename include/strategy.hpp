@@ -17,19 +17,19 @@ struct RecordParmas {
 class QueryResponder {
    public:
     virtual ~QueryResponder() = default;
-    virtual auto response(Collection& collection, const Packet& packet)
+    virtual auto response(const Collection& collection, const Packet& packet)
         -> std::optional<Packet> = 0;
 };
 
 class ARecordResponder : public QueryResponder {
    public:
-    auto response(Collection& collection, const Packet& packet)
+    auto response(const Collection& collection, const Packet& packet)
         -> std::optional<Packet> override;
 };
 
 class NotFoundResponder : public QueryResponder {
    public:
-    auto response(Collection& collection, const Packet& packet)
+    auto response(const Collection& collection, const Packet& packet)
         -> std::optional<Packet> override;
 };
 
