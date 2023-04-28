@@ -11,6 +11,19 @@
 #include "util.hpp"
 
 auto ServerBuilder::bind(uint16_t port) -> Server {
+    this->server.forward_sin = {
+        .sin_family = AF_INET,
+        .sin_port = htons(FORWARD_PORT),
+    };
+
+    int ret = inet_pton(AF_INET, this->forward_ip.data(),
+                        &this->server.forward_sin.sin_addr);
+
+    if (ret <= 0) {
+        err_quit(
+            ("Can't convert IPv4 address for " + this->forward_ip).c_str());
+    }
+
     sockaddr_in client_sin{.sin_family = AF_INET, .sin_port = htons(port)};
 
     this->server.client_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -78,27 +91,6 @@ auto ServerBuilder::load_config(const fs::path& config_path) -> ServerBuilder& {
     return *this;
 }
 
-auto ServerBuilder::init() -> ServerBuilder& {
-    this->server.forward_sin = {
-        .sin_family = AF_INET,
-        .sin_port = htons(FORWARD_PORT),
-    };
-
-    int ret = inet_pton(AF_INET, this->forward_ip.data(),
-                        &this->server.forward_sin.sin_addr);
-
-    if (ret <= 0) {
-        err_quit(
-            ("Can't convert IPv4 address for " + this->forward_ip).c_str());
-    }
-
-    // this->register_fn(std::make_unique<ARecordResponder>())
-    //     .register_fn(std::make_unique<ARecordResponder>())
-    //     .register_fn(std::make_unique<ARecordResponder>());
-
-    return *this;
-}
-
 void ServerBuilder::load_zone(const fs::path& zone_path) {
     std::ifstream ifs(zone_path);
     if (!ifs.is_open()) {
@@ -131,6 +123,13 @@ void ServerBuilder::load_zone(const fs::path& zone_path) {
 
         this->server.collection.add_record(domain, r);
     }
+}
+
+auto ServerBuilder::register_fn(Record::Type type,
+                                std::shared_ptr<QueryResponder> handler)
+    -> ServerBuilder& {
+    this->server.registered_handler[type] = handler;
+    return *this;
 }
 
 auto RecordBuilder::set_name(const std::string& name) -> RecordBuilder& {
@@ -174,7 +173,7 @@ auto RecordBuilder::set_rdata(const std::vector<std::string>& data)
 auto RecordBuilder::build() -> Record { return this->record; }
 
 auto PacketBuilder::write(void* data, size_t dlen) -> PacketBuilder& {
-    spdlog::debug("Write from {} to {}", this->nbytes, this->nbytes + dlen);
+    // spdlog::debug("Write from {} to {}", this->nbytes, this->nbytes + dlen);
     std::copy_n(reinterpret_cast<uint8_t*>(data), dlen,
                 this->buffer + this->nbytes);
     this->nbytes += dlen;

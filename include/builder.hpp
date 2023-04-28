@@ -8,13 +8,13 @@ class ServerBuilder {
    public:
     Server server;
     auto load_config(const fs::path& config_path) -> ServerBuilder&;
-    auto init() -> ServerBuilder&;
     auto bind(uint16_t port) -> Server;
+    auto register_fn(Record::Type type, std::shared_ptr<QueryResponder> handler)
+        -> ServerBuilder&;
 
    private:
     std::string forward_ip;
 
-    auto register_fn(std::shared_ptr<QueryResponder> handler) -> ServerBuilder&;
     void load_zone(const fs::path& zone_path);
 };
 

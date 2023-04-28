@@ -7,7 +7,7 @@ auto Collection::add_record(const std::string& domain, const Record& record)
     this->records[domain].push_back(record);
 }
 
-auto Collection::search_domain(const std::string& qname)
+auto Collection::search_domain(const std::string& qname) const
     -> std::optional<std::string> {
     for (const auto& [domain_name, domain_records] : this->records) {
         if (qname.find(domain_name) != std::string::npos) {
@@ -18,7 +18,7 @@ auto Collection::search_domain(const std::string& qname)
 }
 
 auto Collection::search_records(const std::string& qname, uint16_t qtype,
-                                uint16_t qclass) -> std::vector<Record> {
+                                uint16_t qclass) const -> std::vector<Record> {
     auto domain_name = search_domain(qname);
     if (!domain_name) {
         return {};
@@ -32,7 +32,7 @@ auto Collection::search_records(const std::string& qname, uint16_t qtype,
         subdomain = qname.substr(0, pos - 1);
     }
 
-    std::vector<Record> ret, domain_records = this->records[*domain_name];
+    std::vector<Record> ret, domain_records = this->records.at(*domain_name);
     for (const auto& record : domain_records) {
         if (record.r_name != subdomain || record.r_type != qtype) {
             continue;
