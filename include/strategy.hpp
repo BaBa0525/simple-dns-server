@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "collection.hpp"
 #include "packet.hpp"
 #include "record.hpp"
 
@@ -16,20 +17,20 @@ struct RecordParmas {
 class QueryResponder {
    public:
     virtual ~QueryResponder() = default;
-    virtual auto response(const std::vector<Record>& records,
-                          const Packet& packet) -> Packet = 0;
+    virtual auto response(Collection& collection, const Packet& packet)
+        -> std::optional<Packet> = 0;
 };
 
 class ARecordResponder : public QueryResponder {
    public:
-    auto response(const std::vector<Record>& records, const Packet& packet)
-        -> Packet override;
+    auto response(Collection& collection, const Packet& packet)
+        -> std::optional<Packet> override;
 };
 
 class NotFoundResponder : public QueryResponder {
    public:
-    auto response(const std::vector<Record>& records, const Packet& packet)
-        -> Packet override;
+    auto response(Collection& collection, const Packet& packet)
+        -> std::optional<Packet> override;
 };
 
 #endif

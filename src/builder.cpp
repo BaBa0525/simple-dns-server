@@ -129,7 +129,7 @@ void ServerBuilder::load_zone(const fs::path& zone_path) {
                      .set_rdata(split(slices[4]))
                      .build();
 
-        this->server.records[domain].push_back(r);
+        this->server.collection.add_record(domain, r);
     }
 }
 
