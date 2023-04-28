@@ -66,9 +66,16 @@ auto Server::run() -> void {
             }
             continue;
         }
-        auto ret_pkt =
-            this->registered_handler[static_cast<Record::Type>(qtype)]
-                ->response(this->collection, pkt);
+
+        auto responder =
+            this->registered_handler.find(static_cast<Record::Type>(qtype));
+
+        if (responder == this->registered_handler.end()) {
+            spdlog::warn("No responder for type {}", qtype);
+            continue;
+        }
+
+        auto ret_pkt = responder->second->response(this->collection, pkt);
 
         if (!ret_pkt) {
             spdlog::warn("Fail to build response packet");
