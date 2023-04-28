@@ -68,15 +68,16 @@ auto ARecordResponder::response(const Collection& collection,
 
     auto domain_raw = collection.search_domain(query.qname);
 
-    auto A_Records =
+    auto A_records =
         collection.search_records(query.qname, Record::A, Record::IN);
 
-    auto NS_Records =
+    auto NS_records =
         collection.search_records(domain_raw.value(), Record::NS, Record::IN);
 
     Header header = packet.header;
-    header.dns_ancount = A_Records.size();
-    header.dns_nscount = NS_Records.size();
+    header.dns_ancount = A_records.size();
+    header.dns_nscount = NS_records.size();
+    header.dns_arcount = 0;
     header.dns_qr = 1;
     header = Header::to_response(header);
 
@@ -87,7 +88,7 @@ auto ARecordResponder::response(const Collection& collection,
     builder.write(&header, sizeof(header))
         .write(query_raw.get(), query.raw_size());
 
-    for (auto record : A_Records) {
+    for (auto record : A_records) {
         std::vector<uint8_t> domain = compress_domain(query.qname);
         in_addr_t address = inet_addr(record.r_rdata[0].c_str());
 
@@ -103,7 +104,7 @@ auto ARecordResponder::response(const Collection& collection,
             .write(&address, sizeof(address));
     }
 
-    for (auto record : NS_Records) {
+    for (auto record : NS_records) {
         std::vector<uint8_t> domain = compress_domain(domain_raw.value());
         std::vector<uint8_t> ns = compress_domain(record.r_rdata[0]);
 
@@ -117,6 +118,72 @@ auto ARecordResponder::response(const Collection& collection,
         builder.write(domain.data(), domain.size())
             .write(&record_params, sizeof(record_params))
             .write(ns.data(), ns.size());
+    }
+
+    return builder.create();
+}
+
+auto NSRecordResponder::response(const Collection& collection,
+                                 const Packet& packet)
+    -> std::optional<Packet> {
+    auto query = Query::from_binary(packet.payload, packet.plen);
+
+    auto NS_records =
+        collection.search_records(query.qname, Record::NS, Record::IN);
+
+    Header header = packet.header;
+    header.dns_ancount = NS_records.size();
+    header.dns_arcount = NS_records.size();
+    header.dns_qr = 1;
+    header = Header::to_response(header);
+
+    auto query_raw = query.raw();
+
+    PacketBuilder builder{};
+
+    builder.write(&header, sizeof(header))
+        .write(query_raw.get(), query.raw_size());
+
+    for (auto record : NS_records) {
+        std::vector<uint8_t> domain = compress_domain(query.qname);
+        std::vector<uint8_t> ns = compress_domain(record.r_rdata[0]);
+
+        RecordParmas record_params = {
+            .r_type = htons(record.r_type),
+            .r_class = htons(record.r_class),
+            .r_ttl = htonl(record.r_ttl),
+            .r_rdlength = htons(ns.size()),
+        };
+
+        builder.write(domain.data(), domain.size())
+            .write(&record_params, sizeof(record_params))
+            .write(ns.data(), ns.size());
+    }
+
+    for (auto NS_record : NS_records) {
+        auto ns_name = NS_record.r_rdata[0];
+        auto A_records =
+            collection.search_records(ns_name, Record::A, Record::IN);
+
+        if (A_records.size() == 0) {
+            continue;
+        }
+
+        auto record = A_records[0];
+
+        std::vector<uint8_t> domain = compress_domain(ns_name);
+        in_addr_t address = inet_addr(record.r_rdata[0].c_str());
+
+        RecordParmas record_params = {
+            .r_type = htons(record.r_type),
+            .r_class = htons(record.r_class),
+            .r_ttl = htonl(record.r_ttl),
+            .r_rdlength = htons(sizeof(address)),
+        };
+
+        builder.write(domain.data(), domain.size())
+            .write(&record_params, sizeof(record_params))
+            .write(&address, sizeof(address));
     }
 
     return builder.create();

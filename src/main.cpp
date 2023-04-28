@@ -15,6 +15,8 @@ int main(int argc, char* argv[], char* envp[]) {
         ServerBuilder()
             .load_config(config_path)
             .register_fn(Record::Type::A, std::make_shared<ARecordResponder>())
+            .register_fn(Record::Type::NS,
+                         std::make_shared<NSRecordResponder>())
             .bind(port);
     spdlog::info("Server bind to port {}\n", port);
 
